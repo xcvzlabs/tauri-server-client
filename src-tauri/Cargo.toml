@@ -1,0 +1,25 @@
+[package]
+name = "tauri-server-client"
+description = "LAN-based client-server desktop application built with Tauri and Rust"
+version = "0.0.0"
+authors = ["Mon Albert Gamil <mrgamilmonalbert@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/xcvzlabs/tauri-server-client"
+edition = "2024"
+rust-version = "1.96.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.11.3", features = [] }
+tauri-plugin-log = "2"
