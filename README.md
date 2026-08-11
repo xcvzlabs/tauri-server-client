@@ -1,75 +1,50 @@
-# Nuxt Minimal Starter
+# Tauri Server Client
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+[![CI](https://github.com/xcvzlabs/tauri-server-client/actions/workflows/ci.yaml/badge.svg?style=flat&colorA=18181B&colorB=34d399)](https://github.com/xcvzlabs/tauri-server-client/actions/workflows/ci.yaml)
+[![Release](https://github.com/xcvzlabs/tauri-server-client/actions/workflows/release.yaml/badge.svg?style=flat&colorA=18181B&colorB=34d399)](https://github.com/xcvzlabs/tauri-server-client/actions/workflows/release.yaml)
+
+A LAN-based client-server desktop application built with Tauri and Rust, with a Nuxt + Vue frontend.
+
+## Stack
+
+- [Tauri v2](https://v2.tauri.app) (Rust) for the desktop shell
+- [Nuxt 4](https://nuxt.com) + Vue 3 for the frontend
+- [Bun](https://bun.sh) as the runtime and package manager
+- [Valibot](https://valibot.dev) for validation
+- [Vitest](https://vitest.dev) for tests
+- [oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs) for linting and formatting
 
 ## Setup
 
-Make sure to install dependencies:
+Install dependencies:
 
 ```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
 bun install
 ```
 
-## Development Server
+## Development
 
-Start the development server on `http://localhost:3000`:
+Start the app in development mode (Nuxt dev server + Tauri window):
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
 bun run dev
 ```
 
-## Production
-
-Build the application for production:
+## Checks
 
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+bun run fmt:check   # oxfmt + cargo fmt --check
+bun run lint        # oxlint + cargo clippy
+bun run nuxt:typecheck
+bun run test         # vitest
 ```
 
-Locally preview production build:
+## Release
+
+Version bumps, changelog generation, and Tauri version sync are handled by `scripts/release.ts`:
 
 ```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
+bun run release patch   # or minor / major
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+This bumps `package.json`, generates the changelog, syncs the version into `src-tauri/Cargo.toml`, `Cargo.lock`, and `tauri.conf.json`, then commits, tags, and pushes. The [release workflow](.github/workflows/release.yaml) picks up the pushed tag and builds/publishes the desktop app.
