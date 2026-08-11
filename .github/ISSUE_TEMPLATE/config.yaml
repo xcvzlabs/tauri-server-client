@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: https://github.com/xcvzlabs/tauri-server-client/security/advisories/new
+    about: Please report security vulnerabilities privately via GitHub Security Advisories, not public issues.
+  - name: Question or Discussion
+    url: https://github.com/xcvzlabs/tauri-server-client/discussions
+    about: Ask questions and discuss ideas that are not yet concrete bug reports or feature requests.
