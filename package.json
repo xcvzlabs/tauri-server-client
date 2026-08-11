@@ -9,12 +9,20 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint"
   },
   "dependencies": {
     "nuxt": "^4.5.2",
     "vue": "^3.5.41",
     "vue-router": "^5.2.0"
   },
-  "packageManager": "bun@1.3.14"
+  "packageManager": "bun@1.3.14",
+  "devDependencies": {
+    "oxfmt": "^0.63.0",
+    "oxlint": "^1.78.0",
+    "oxlint-tsgolint": "^7.0.2001"
+  }
 }
