@@ -1,11 +1,42 @@
 {
   "version": 1,
   "skills": {
+    "add-diagnostic": {
+      "source": "nostics",
+      "sourceType": "node_modules",
+      "computedHash": "bffe858a73515c6dcd391644a6c5ac494f0ef56454fa713156f093f7241544f6"
+    },
+    "axum": {
+      "source": "bobmatnyc/claude-mpm-skills",
+      "sourceType": "github",
+      "skillPath": "toolchains/rust/frameworks/axum/SKILL.md",
+      "computedHash": "ddd6e48c272bcc10016315b776a1c9c02f07a095c7ddc2b6d11c22f649da0063"
+    },
+    "dotenv": {
+      "source": "dotenv",
+      "sourceType": "node_modules",
+      "computedHash": "7580a9737aebb75d98d174bed9b3545586db2d3a112f0fe69c8b79eecfd5ce99"
+    },
+    "dotenvx": {
+      "source": "dotenv",
+      "sourceType": "node_modules",
+      "computedHash": "851072ff03649019eeadb9780b87eacdc3e0b39b8407105354144f692ebc699b"
+    },
     "emil-design-eng": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
       "skillPath": "skills/emil-design-eng/SKILL.md",
       "computedHash": "41b0a4dc1a27164fe297845a6c6850a39e9242c42c9be999967fcee9df2c5974"
+    },
+    "fast-npm-meta": {
+      "source": "fast-npm-meta",
+      "sourceType": "node_modules",
+      "computedHash": "a73ec8f6619e0f515759fb63804db8ff22306bb3a5189c16e39a02fa42e692ef"
+    },
+    "nostics": {
+      "source": "nostics",
+      "sourceType": "node_modules",
+      "computedHash": "07db3216d541cb51221ad4ad2af8e0581a73abe14ea0c0c685f5c3d4a586d3ad"
     },
     "nuxt": {
       "source": "antfu/skills",
