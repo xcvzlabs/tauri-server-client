@@ -1,5 +1,5 @@
 name: Setup project
-description: Set up Bun (cached) and install dependencies. Assumes the repo has already been checked out.
+description: Set up Bun and Node.js (cached) and install dependencies. Assumes the repo has already been checked out.
 
 runs:
   using: composite
@@ -8,6 +8,11 @@ runs:
       uses: oven-sh/setup-bun@v2
       with:
         bun-version: 1.3.14
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: lts/*
 
     - name: Install dependencies
       shell: bash
