@@ -103,7 +103,7 @@ mod tests {
             !became_offline,
             "one of two connections dropping should not go offline"
         );
-        
+
         assert_eq!(registry.online_user_ids().await, vec!["user-1".to_string()]);
 
         let became_offline = registry.disconnect("user-1").await;

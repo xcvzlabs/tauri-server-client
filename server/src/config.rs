@@ -81,7 +81,7 @@ where
     T::Err: std::fmt::Display,
 {
     let raw = get(name).unwrap_or_else(|| default.to_string());
-    
+
     raw.parse::<T>().map_err(|err| ConfigError::Invalid {
         name,
         reason: err.to_string(),
