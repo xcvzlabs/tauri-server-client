@@ -17,12 +17,19 @@
         "height": 600,
         "resizable": true,
         "fullscreen": false,
-        "center": true
+        "center": true,
+        "hiddenTitle": true,
+        "titleBarStyle": "Overlay",
+        "trafficLightPosition": {
+          "x": 12,
+          "y": 19.5
+        }
       }
     ],
     "security": {
       "csp": null
-    }
+    },
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,
