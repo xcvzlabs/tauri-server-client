@@ -1,3 +1,5 @@
+import tailwindcss from '@tailwindcss/vite';
+
 const host = process.env.TAURI_HOST;
 
 export default defineNuxtConfig({
@@ -27,6 +29,7 @@ export default defineNuxtConfig({
         ignored: ['**/src-tauri/**', '**/server/**'],
       },
     },
+    plugins: [tailwindcss()],
   },
   app: {
     head: {
@@ -61,6 +64,22 @@ export default defineNuxtConfig({
   dir: {
     modules: 'app/modules',
   },
+  components: [
+    {
+      path: '~/components/ui',
+      extensions: ['vue'],
+    },
+    '~/components',
+  ],
   ssr: false,
   ignore: ['**/src-tauri/**', '**/server/**'],
+  css: ['~/assets/css/tailwind.css'],
+  modules: ['@nuxtjs/color-mode', '@vueuse/nuxt', 'shadcn-nuxt'],
+  colorMode: {
+    classSuffix: '',
+  },
+  shadcn: {
+    prefix: '',
+    componentDir: '@/components/ui',
+  },
 });

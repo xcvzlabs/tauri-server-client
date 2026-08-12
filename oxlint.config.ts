@@ -110,5 +110,5 @@ export default defineConfig({
     typeAware: true,
     typeCheck: true,
   },
-  ignorePatterns: ['**/.*/**'],
+  ignorePatterns: ['**/.*/**', 'app/components/ui/*'],
 });

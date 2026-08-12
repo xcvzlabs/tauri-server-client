@@ -1,4 +1,4 @@
-const OXLINT_IGNORED = /(^|\/)\.[^/]+\//;
+const OXLINT_IGNORED = /(^|\/)\.[^/]+\/|(^|\/)app\/components\/ui\//;
 
 export default {
   '*.{vue,ts,md,yaml,toml,md,json}': 'oxfmt',
