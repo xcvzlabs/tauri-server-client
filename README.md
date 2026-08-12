@@ -9,10 +9,15 @@ A LAN-based client-server desktop application built with Tauri and Rust, with a 
 
 - [Tauri v2](https://v2.tauri.app) (Rust) for the desktop shell
 - [Nuxt 4](https://nuxt.com) + Vue 3 for the frontend
+- [Axum](https://docs.rs/axum) + SQLite ([sqlx](https://docs.rs/sqlx)) for the LAN server (`server/`)
 - [Bun](https://bun.sh) as the runtime and package manager
 - [Valibot](https://valibot.dev) for validation
 - [Vitest](https://vitest.dev) for tests
 - [oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs) for linting and formatting
+
+## Server
+
+The `server/` directory is a standalone Axum REST + WebSocket API (JWT auth, SQLite storage, real-time user presence) that the Tauri app and Nuxt frontend talk to over the LAN. See [server/README.md](server/README.md) for setup, configuration, and the API reference.
 
 ## Setup
 

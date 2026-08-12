@@ -24,7 +24,7 @@ export default defineNuxtConfig({
           }
         : undefined,
       watch: {
-        ignored: ['**/src-tauri/**'],
+        ignored: ['**/src-tauri/**', '**/server/**'],
       },
     },
   },
@@ -62,5 +62,5 @@ export default defineNuxtConfig({
     modules: 'app/modules',
   },
   ssr: false,
-  ignore: ['**/src-tauri/**'],
+  ignore: ['**/src-tauri/**', '**/server/**'],
 });

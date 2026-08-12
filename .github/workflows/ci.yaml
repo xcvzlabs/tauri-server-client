@@ -137,10 +137,44 @@ jobs:
         working-directory: src-tauri
         run: cargo build
 
+  server:
+    name: Server (Rust)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
+
+      - name: Format check
+        working-directory: server
+        run: cargo fmt -- --check
+
+      - name: Clippy
+        working-directory: server
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Build
+        working-directory: server
+        run: cargo build
+
+      - name: Test
+        working-directory: server
+        run: cargo test
+
   ci:
     name: CI
     if: always()
-    needs: [lint, format, typecheck, test, build, tauri]
+    needs: [lint, format, typecheck, test, build, tauri, server]
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Check job results
