@@ -1,7 +1,7 @@
 {
   "name": "tauri-server-client",
   "description": "LAN-based client-server desktop application built with Tauri and Rust",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "private": true,
   "scripts": {

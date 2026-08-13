@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "tauri-server-client",
   "identifier": "com.xcvzlabs.tauri-server-client.dev",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",

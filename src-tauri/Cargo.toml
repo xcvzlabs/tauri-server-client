@@ -1,7 +1,7 @@
 [package]
 name = "tauri-server-client"
 description = "LAN-based client-server desktop application built with Tauri and Rust"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Mon Albert Gamil <mrgamilmonalbert@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/xcvzlabs/tauri-server-client"
