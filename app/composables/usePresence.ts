@@ -1,5 +1,4 @@
 import * as v from 'valibot';
-import { presenceEventSchema } from '~/types/api.ts';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected';
 
@@ -64,12 +63,12 @@ async function scheduleReconnect(): Promise<void> {
 
 function openSocket(): void {
   const session = useSession();
-  if (closedIntentionally || !session.serverUrl.value || !session.accessToken.value) {
+  if (closedIntentionally || !session.serverURL.value || !session.accessToken.value) {
     return;
   }
 
   connectionState.value = 'connecting';
-  const url = `${session.serverUrl.value.wsBase}/ws/presence?token=${encodeURIComponent(session.accessToken.value)}`;
+  const url = `${session.serverURL.value.wsBase}/ws/presence?token=${encodeURIComponent(session.accessToken.value)}`;
   const ws = new WebSocket(url);
   socket = ws;
 

@@ -1,17 +1,13 @@
 import * as v from 'valibot';
 
-const serverUrlInputSchema = v.pipe(v.string(), v.trim(), v.minLength(1, 'Enter a server address'));
+const serverURLInputSchema = v.pipe(v.string(), v.trim(), v.minLength(1, 'Enter a server address'));
 
-export type NormalizedServerUrl = {
-  httpBase: string;
-  wsBase: string;
-};
-
-export function normalizeServerUrl(input: string): NormalizedServerUrl {
-  const trimmed = v.parse(serverUrlInputSchema, input);
+export function normalizeServerURL(input: string): NormalizedServerURL {
+  const trimmed = v.parse(serverURLInputSchema, input);
   const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
 
   let url: URL;
+
   try {
     url = new URL(withScheme);
   } catch {

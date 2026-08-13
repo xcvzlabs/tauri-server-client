@@ -29,6 +29,19 @@ export type UserProfile = {
   last_seen_at: string | null;
 };
 
+export type AdminUserProfile = {
+  id: string;
+  username: string;
+  email: string;
+  display_name: string;
+  role: UserRole;
+  is_online: boolean;
+  is_disabled: boolean;
+  ip_address: string | null;
+  last_seen_at: string | null;
+  created_at: string;
+};
+
 export type TokenResponse = {
   access_token: string;
   refresh_token: string;

@@ -1,58 +1,58 @@
 <script setup lang="ts">
+  import { Server, Users } from 'lucide-vue-next';
+
   const session = useSession();
   const hosting = useHosting();
 
-  const isStarting = ref(false);
+  const isStarting = ref<boolean>(false);
   const errorMessage = ref<string | null>(null);
 
   async function handleHost(): Promise<void> {
     errorMessage.value = null;
     isStarting.value = true;
+
     try {
       const info = await hosting.start();
-      await session.setServerUrl(`${info.host}:${info.port}`);
-      // If a session was already restored for this machine's server, the global
-      // middleware will have already sent us to /home before this even runs. Reaching
-      // here means there's no account yet, so register the initial admin account.
-      await navigateTo('/register');
+      await session.setServerURL(`${info.host}:${info.port}`);
+      await navigateTo('/signup');
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : 'Failed to start hosting';
     } finally {
       isStarting.value = false;
     }
   }
-
-  async function handleJoin(): Promise<void> {
-    await navigateTo('/connect');
-  }
 </script>
 
 <template>
-  <main class="screen">
-    <div class="card">
-      <h1>Welcome</h1>
-      <p class="hint">Are you hosting this session, or joining one that's already running?</p>
+  <AppPageContainer class="flex items-center justify-center p-6">
+    <CustomCard class="w-full max-w-sm">
+      <CardTitle class="mb-1">Welcome</CardTitle>
+      <CardDescription class="mb-4">
+        Are you hosting this session, or joining one that's already running?
+      </CardDescription>
 
-      <button
-        type="button"
-        :disabled="isStarting"
-        @click="handleHost"
-      >
-        {{ isStarting ? 'Starting server…' : "Host (I'm the admin)" }}
-      </button>
-      <button
-        type="button"
-        @click="handleJoin"
-      >
-        Join a server
-      </button>
+      <div class="flex flex-col gap-2">
+        <CustomButton
+          :disabled="isStarting"
+          @click="handleHost"
+        >
+          <Server data-icon="inline-start" />
+          {{ isStarting ? 'Starting server…' : "Host (I'm the admin)" }}
+        </CustomButton>
 
-      <p
-        v-if="errorMessage"
-        class="error"
-      >
-        {{ errorMessage }}
-      </p>
-    </div>
-  </main>
+        <CustomLink
+          to="/connect"
+          aria-label="Join a server"
+        >
+          <Users data-icon="inline-start" />
+          Join a server
+        </CustomLink>
+
+        <FieldError
+          v-if="errorMessage"
+          :errors="[{ message: errorMessage }]"
+        />
+      </div>
+    </CustomCard>
+  </AppPageContainer>
 </template>

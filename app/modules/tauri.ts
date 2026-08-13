@@ -1,4 +1,6 @@
 import * as tauriApp from '@tauri-apps/api/app';
+import * as tauriCore from '@tauri-apps/api/core';
+import * as tauriHttp from '@tauri-apps/plugin-http';
 import * as tauriStore from '@tauri-apps/plugin-store';
 import { addImports, defineNuxtModule } from 'nuxt/kit';
 import { capitalize } from '../utils/capitalize.ts';
@@ -9,6 +11,8 @@ type ModuleOptions = {
 
 const tauriModules = [
   { module: tauriApp, prefix: 'App', importPath: '@tauri-apps/api/app' },
+  { module: tauriCore, prefix: 'Core', importPath: '@tauri-apps/api/core' },
+  { module: tauriHttp, prefix: 'HTTP', importPath: '@tauri-apps/plugin-http' },
   { module: tauriStore, prefix: 'Store', importPath: '@tauri-apps/plugin-store' },
 ];
 

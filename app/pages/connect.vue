@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  const serverAddress = ref('');
+  const serverAddress = ref<string>('');
   const errorMessage = ref<string | null>(null);
-  const isSubmitting = ref(false);
+  const isSubmitting = ref<boolean>(false);
 
   const session = useSession();
 
@@ -9,8 +9,8 @@
     errorMessage.value = null;
     isSubmitting.value = true;
     try {
-      await session.setServerUrl(serverAddress.value);
-      await navigateTo('/login');
+      await session.setServerURL(serverAddress.value);
+      await navigateTo('/signin');
     } catch (error) {
       errorMessage.value =
         error instanceof Error ? error.message : 'Could not reach a server at that address';
@@ -21,38 +21,50 @@
 </script>
 
 <template>
-  <main class="screen">
-    <form
-      class="card"
-      @submit.prevent="handleSubmit"
-    >
-      <h1>Connect to a server</h1>
-      <p class="hint">
+  <AppPageContainer class="flex items-center justify-center p-6">
+    <CustomCard class="w-full max-w-sm">
+      <CardTitle class="mb-1">Connect to a server</CardTitle>
+      <CardDescription class="mb-4">
         Enter the address of the server on your LAN, e.g. <code>192.168.1.10:8080</code>.
-      </p>
+      </CardDescription>
 
-      <label for="server-address">Server address</label>
-      <input
-        id="server-address"
-        v-model="serverAddress"
-        type="text"
-        placeholder="192.168.1.10:8080"
-        autofocus
-      />
-
-      <p
-        v-if="errorMessage"
-        class="error"
+      <form
+        class="flex flex-col gap-4"
+        @submit.prevent="handleSubmit"
       >
-        {{ errorMessage }}
-      </p>
+        <Field :data-invalid="!!errorMessage">
+          <FieldLabel for="server-address">Server address</FieldLabel>
 
-      <button
-        type="submit"
-        :disabled="isSubmitting"
-      >
-        {{ isSubmitting ? 'Connecting…' : 'Connect' }}
-      </button>
-    </form>
-  </main>
+          <div class="group relative">
+            <Input
+              id="server-address"
+              v-model="serverAddress"
+              :aria-invalid="!!errorMessage"
+              type="text"
+              placeholder="192.168.1.10:8080"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              autofocus
+            />
+
+            <CustomCornerMarks focus-within />
+          </div>
+
+          <FieldError
+            v-if="errorMessage"
+            :errors="[{ message: errorMessage }]"
+          />
+        </Field>
+
+        <CustomButton
+          :disabled="isSubmitting"
+          type="submit"
+        >
+          {{ isSubmitting ? 'Connecting…' : 'Connect' }}
+        </CustomButton>
+      </form>
+    </CustomCard>
+  </AppPageContainer>
 </template>

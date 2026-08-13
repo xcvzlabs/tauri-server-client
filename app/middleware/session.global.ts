@@ -1,5 +1,5 @@
 const PRE_CONNECTION_ROUTE_NAMES = new Set(['index', 'connect']);
-const PRE_AUTH_ROUTE_NAMES = new Set(['login', 'register']);
+const PRE_AUTH_ROUTE_NAMES = new Set(['signin', 'signup']);
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const session = useSession();
@@ -7,12 +7,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const routeName = typeof to.name === 'string' ? to.name : undefined;
 
-  if (!session.serverUrl.value) {
+  if (!session.serverURL.value) {
     return routeName && PRE_CONNECTION_ROUTE_NAMES.has(routeName) ? undefined : navigateTo('/');
   }
 
   if (!session.isAuthenticated.value) {
-    return routeName && PRE_AUTH_ROUTE_NAMES.has(routeName) ? undefined : navigateTo('/login');
+    return routeName && PRE_AUTH_ROUTE_NAMES.has(routeName) ? undefined : navigateTo('/signin');
   }
 
   if (

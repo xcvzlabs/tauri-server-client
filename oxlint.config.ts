@@ -86,7 +86,6 @@ export default defineConfig({
     'vue/no-import-compiler-macros': 'warn',
     'vue/define-props-declaration': 'warn',
     'vue/define-emits-declaration': 'warn',
-    'vue/define-props-destructuring': 'warn',
     'vue/next-tick-style': 'warn',
     'vue/component-definition-name-casing': 'warn',
 

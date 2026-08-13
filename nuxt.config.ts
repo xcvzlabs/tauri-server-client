@@ -64,22 +64,29 @@ export default defineNuxtConfig({
   dir: {
     modules: 'app/modules',
   },
-  components: [
-    {
-      path: '~/components/ui',
-      extensions: ['vue'],
-    },
-    '~/components',
-  ],
   ssr: false,
   ignore: ['**/src-tauri/**', '**/server/**'],
   css: ['~/assets/css/tailwind.css'],
-  modules: ['@nuxtjs/color-mode', '@vueuse/nuxt', 'shadcn-nuxt'],
+  modules: ['@nuxtjs/color-mode', '@nuxt/fonts', '@vueuse/nuxt', 'shadcn-nuxt'],
   colorMode: {
     classSuffix: '',
   },
   shadcn: {
     prefix: '',
     componentDir: '@/components/ui',
+  },
+  fonts: {
+    families: [
+      {
+        name: 'JetBrains Mono',
+        provider: 'google',
+        weights: [400, 500, 600, 700],
+      },
+      {
+        name: 'Inter',
+        provider: 'google',
+        weights: [400, 500, 600, 700],
+      },
+    ],
   },
 });
