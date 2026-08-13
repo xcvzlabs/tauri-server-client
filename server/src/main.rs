@@ -1,18 +1,10 @@
-mod auth;
-mod config;
-mod db;
-mod error;
-mod models;
-mod presence;
-mod routes;
-mod state;
-
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use config::Config;
-use presence::PresenceRegistry;
-use state::AppState;
+use server::config::Config;
+use server::presence::PresenceRegistry;
+use server::state::AppState;
+use server::{db, routes};
 
 #[tokio::main]
 async fn main() {
