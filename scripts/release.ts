@@ -49,7 +49,7 @@ const nextVersion = computeNextVersion(packageJson.version, releaseType);
 const tag = `v${nextVersion}`;
 
 run('bunx', ['changelogen', '-r', nextVersion, '--bump']);
-run('bun', ['run', 'scripts/sync-tauri-version.ts']);
+run('bun', ['run', 'scripts/sync-versions.ts']);
 run('git', [
   'add',
   'package.json',
@@ -57,6 +57,8 @@ run('git', [
   'src-tauri/Cargo.toml',
   'src-tauri/Cargo.lock',
   'src-tauri/tauri.conf.json',
+  'server/Cargo.toml',
+  'server/Cargo.lock',
 ]);
 run('git', ['commit', '-m', `chore(release): ${tag}`]);
 run('git', ['tag', '-a', tag, '-m', tag]);

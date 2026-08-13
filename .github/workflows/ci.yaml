@@ -117,13 +117,15 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Verify Tauri version is synced
+      - name: Verify versions are synced
         run: |
-          bun run scripts/sync-tauri-version.ts
+          bun run scripts/sync-versions.ts
           git diff --exit-code -- \
             src-tauri/Cargo.toml \
             src-tauri/Cargo.lock \
-            src-tauri/tauri.conf.json
+            src-tauri/tauri.conf.json \
+            server/Cargo.toml \
+            server/Cargo.lock
 
       - name: Format check
         working-directory: src-tauri

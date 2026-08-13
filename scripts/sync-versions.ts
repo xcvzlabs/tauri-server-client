@@ -21,7 +21,7 @@ async function writeJsonVersion(path: string, version: string): Promise<void> {
   const updated = source.replace(/^(\s*"version":\s*")[^"]+(")/m, `$1${version}$2`);
 
   if (updated === source && !source.includes(`"version": "${version}"`)) {
-    const message = `[SYNC_TAURI_VERSION_TARGET_MISSING] No version field found in ${path}`;
+    const message = `[SYNC_VERSIONS_TARGET_MISSING] No version field found in ${path}`;
     throw new Error(message);
   }
 
@@ -37,7 +37,7 @@ async function syncCargoPackageVersion(
   const packageNameMatch = /^name = "([^"]+)"$/m.exec(cargoToml);
 
   if (!packageNameMatch?.[1]) {
-    const message = `[SYNC_TAURI_VERSION_CARGO_NAME_UNRESOLVED] No package name in ${packageCargoTomlPath}`;
+    const message = `[SYNC_VERSIONS_CARGO_NAME_UNRESOLVED] No package name in ${packageCargoTomlPath}`;
     throw new Error(message);
   }
 
@@ -52,7 +52,7 @@ async function syncCargoPackageVersion(
   const cargoLockPattern = new RegExp(pattern);
 
   if (!cargoLockPattern.test(cargoLock)) {
-    const message = `[SYNC_TAURI_VERSION_CARGO_LOCK_UNRESOLVED] Package ${cargoPackageName} not found in ${packageCargoLockPath}`;
+    const message = `[SYNC_VERSIONS_CARGO_LOCK_UNRESOLVED] Package ${cargoPackageName} not found in ${packageCargoLockPath}`;
     throw new Error(message);
   }
 
