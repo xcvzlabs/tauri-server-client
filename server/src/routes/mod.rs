@@ -27,10 +27,10 @@ pub fn build_router(state: AppState) -> Router {
         .expect("valid rate limiter configuration");
 
     let auth_routes = Router::new()
-        .route("/register", post(auth::register))
-        .route("/login", post(auth::login))
+        .route("/signup", post(auth::sign_up))
+        .route("/signin", post(auth::sign_in))
         .route("/refresh", post(auth::refresh))
-        .route("/logout", post(auth::logout))
+        .route("/signout", post(auth::sign_out))
         .layer(GovernorLayer::new(Arc::new(auth_rate_limit)));
 
     let user_routes = Router::new()
@@ -175,7 +175,7 @@ mod tests {
         serde_json::from_slice(&bytes).expect("valid json body")
     }
 
-    fn register_payload(username: &str) -> Value {
+    fn sign_up_payload(username: &str) -> Value {
         json!({
             "username": username,
             "email": format!("{username}@example.com"),
@@ -203,35 +203,35 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn register_then_duplicate_username_is_conflict() {
+    async fn sign_up_then_duplicate_username_is_conflict() {
         let (state, _guard) = test_state().await;
         let app = build_router(state);
-        let payload = register_payload("alice");
+        let payload = sign_up_payload("alice");
 
         let response = app
             .clone()
-            .oneshot(json_request("POST", "/api/v1/auth/register", &payload))
+            .oneshot(json_request("POST", "/api/v1/auth/signup", &payload))
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let response = app
-            .oneshot(json_request("POST", "/api/v1/auth/register", &payload))
+            .oneshot(json_request("POST", "/api/v1/auth/signup", &payload))
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::CONFLICT);
     }
 
     #[tokio::test]
-    async fn register_rejects_a_password_below_the_minimum_length() {
+    async fn sign_up_rejects_a_password_below_the_minimum_length() {
         let (state, _guard) = test_state().await;
         let app = build_router(state);
 
-        let mut payload = register_payload("bob");
+        let mut payload = sign_up_payload("bob");
         payload["password"] = json!("short");
 
         let response = app
-            .oneshot(json_request("POST", "/api/v1/auth/register", &payload))
+            .oneshot(json_request("POST", "/api/v1/auth/signup", &payload))
             .await
             .unwrap();
 
@@ -239,31 +239,35 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn login_succeeds_then_rejects_a_wrong_password() {
+    async fn sign_in_succeeds_then_rejects_a_wrong_password() {
         let (state, _guard) = test_state().await;
         let app = build_router(state);
 
         app.clone()
             .oneshot(json_request(
                 "POST",
-                "/api/v1/auth/register",
-                &register_payload("carol"),
+                "/api/v1/auth/signup",
+                &sign_up_payload("carol"),
             ))
             .await
             .unwrap();
 
-        let login_payload =
+        let sign_in_payload =
             json!({ "username_or_email": "carol", "password": "correcthorsebattery" });
         let response = app
             .clone()
-            .oneshot(json_request("POST", "/api/v1/auth/login", &login_payload))
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/auth/signin",
+                &sign_in_payload,
+            ))
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let bad_login = json!({ "username_or_email": "carol", "password": "wrong-password" });
+        let bad_sign_in = json!({ "username_or_email": "carol", "password": "wrong-password" });
         let response = app
-            .oneshot(json_request("POST", "/api/v1/auth/login", &bad_login))
+            .oneshot(json_request("POST", "/api/v1/auth/signin", &bad_sign_in))
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
@@ -296,8 +300,8 @@ mod tests {
             .clone()
             .oneshot(json_request(
                 "POST",
-                "/api/v1/auth/register",
-                &register_payload("dave"),
+                "/api/v1/auth/signup",
+                &sign_up_payload("dave"),
             ))
             .await
             .unwrap();
@@ -326,8 +330,8 @@ mod tests {
             .clone()
             .oneshot(json_request(
                 "POST",
-                "/api/v1/auth/register",
-                &register_payload("erin"),
+                "/api/v1/auth/signup",
+                &sign_up_payload("erin"),
             ))
             .await
             .unwrap();
@@ -362,8 +366,8 @@ mod tests {
             .clone()
             .oneshot(json_request(
                 "POST",
-                "/api/v1/auth/register",
-                &register_payload("frank"),
+                "/api/v1/auth/signup",
+                &sign_up_payload("frank"),
             ))
             .await
             .unwrap();
@@ -403,7 +407,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn logout_revokes_the_refresh_token() {
+    async fn sign_out_revokes_the_refresh_token() {
         let (state, _guard) = test_state().await;
         let app = build_router(state);
 
@@ -411,8 +415,8 @@ mod tests {
             .clone()
             .oneshot(json_request(
                 "POST",
-                "/api/v1/auth/register",
-                &register_payload("grace"),
+                "/api/v1/auth/signup",
+                &sign_up_payload("grace"),
             ))
             .await
             .unwrap();
@@ -426,18 +430,18 @@ mod tests {
             .expect("refresh token present")
             .to_string();
 
-        let mut logout_request = json_request(
+        let mut sign_out_request = json_request(
             "POST",
-            "/api/v1/auth/logout",
+            "/api/v1/auth/signout",
             &json!({ "refresh_token": refresh_token }),
         );
-        logout_request.headers_mut().insert(
+        sign_out_request.headers_mut().insert(
             "authorization",
             format!("Bearer {access_token}")
                 .parse()
                 .expect("valid header value"),
         );
-        let response = app.clone().oneshot(logout_request).await.unwrap();
+        let response = app.clone().oneshot(sign_out_request).await.unwrap();
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
         let refresh_payload = json!({ "refresh_token": refresh_token });
@@ -456,12 +460,12 @@ mod tests {
         );
     }
 
-    async fn register(app: Router, username: &str) -> Value {
+    async fn sign_up(app: Router, username: &str) -> Value {
         let response = app
             .oneshot(json_request(
                 "POST",
-                "/api/v1/auth/register",
-                &register_payload(username),
+                "/api/v1/auth/signup",
+                &sign_up_payload(username),
             ))
             .await
             .unwrap();
@@ -470,14 +474,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn first_registered_user_becomes_admin_and_second_becomes_member() {
+    async fn first_signed_up_user_becomes_admin_and_second_becomes_member() {
         let (state, _guard) = test_state().await;
         let app = build_router(state);
 
-        let first = register(app.clone(), "alice").await;
+        let first = sign_up(app.clone(), "alice").await;
         assert_eq!(first["user"]["role"], "admin");
 
-        let second = register(app, "bob").await;
+        let second = sign_up(app, "bob").await;
         assert_eq!(second["user"]["role"], "member");
     }
 
@@ -486,11 +490,11 @@ mod tests {
         let (state, _guard) = test_state().await;
         let app = build_router(state);
 
-        let admin_tokens = register(app.clone(), "alice").await;
+        let admin_tokens = sign_up(app.clone(), "alice").await;
         let admin_token = admin_tokens["access_token"].as_str().unwrap();
         let admin_id = admin_tokens["user"]["id"].as_str().unwrap();
 
-        let member_tokens = register(app.clone(), "bob").await;
+        let member_tokens = sign_up(app.clone(), "bob").await;
         let member_id = member_tokens["user"]["id"].as_str().unwrap();
 
         let response = app
@@ -540,9 +544,9 @@ mod tests {
         let (state, _guard) = test_state().await;
         let app = build_router(state);
 
-        let admin_tokens = register(app.clone(), "alice").await;
+        let admin_tokens = sign_up(app.clone(), "alice").await;
         let admin_token = admin_tokens["access_token"].as_str().unwrap();
-        let member_tokens = register(app.clone(), "bob").await;
+        let member_tokens = sign_up(app.clone(), "bob").await;
         let member_id = member_tokens["user"]["id"].as_str().unwrap();
 
         let response = app
@@ -563,8 +567,8 @@ mod tests {
         let (state, _guard) = test_state().await;
         let app = build_router(state);
 
-        register(app.clone(), "alice").await; // becomes admin, irrelevant to this test
-        let member_tokens = register(app.clone(), "bob").await;
+        sign_up(app.clone(), "alice").await; // becomes admin, irrelevant to this test
+        let member_tokens = sign_up(app.clone(), "bob").await;
         let member_token = member_tokens["access_token"].as_str().unwrap();
         let member_id = member_tokens["user"]["id"].as_str().unwrap();
 
@@ -597,10 +601,10 @@ mod tests {
         let (state, _guard) = test_state().await;
         let app = build_router(state);
 
-        let admin_tokens = register(app.clone(), "alice").await;
+        let admin_tokens = sign_up(app.clone(), "alice").await;
         let admin_token = admin_tokens["access_token"].as_str().unwrap();
         let admin_id = admin_tokens["user"]["id"].as_str().unwrap();
-        let member_tokens = register(app.clone(), "bob").await;
+        let member_tokens = sign_up(app.clone(), "bob").await;
         let member_id = member_tokens["user"]["id"].as_str().unwrap();
 
         let response = app

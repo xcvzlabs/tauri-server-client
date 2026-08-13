@@ -15,7 +15,7 @@ const USER_COLUMNS: &str =
     "id, username, email, password_hash, display_name, role, is_online, last_seen_at, created_at";
 
 #[derive(Debug, Deserialize, Validate)]
-pub struct RegisterRequest {
+pub struct SignUpRequest {
     #[validate(length(min = 3, max = 32, message = "must be between 3 and 32 characters"))]
     pub username: String,
     #[validate(email(message = "must be a valid email address"))]
@@ -27,7 +27,7 @@ pub struct RegisterRequest {
 }
 
 #[derive(Debug, Deserialize, Validate)]
-pub struct LoginRequest {
+pub struct SignInRequest {
     #[validate(length(min = 1, message = "is required"))]
     pub username_or_email: String,
     #[validate(length(min = 1, message = "is required"))]
@@ -49,9 +49,9 @@ pub struct TokenResponse {
     pub user: MeProfile,
 }
 
-pub async fn register(
+pub async fn sign_up(
     State(state): State<AppState>,
-    Json(payload): Json<RegisterRequest>,
+    Json(payload): Json<SignUpRequest>,
 ) -> Result<(StatusCode, Json<TokenResponse>), AppError> {
     payload.validate()?;
 
@@ -98,9 +98,9 @@ pub async fn register(
     Ok((StatusCode::CREATED, Json(tokens)))
 }
 
-pub async fn login(
+pub async fn sign_in(
     State(state): State<AppState>,
-    Json(payload): Json<LoginRequest>,
+    Json(payload): Json<SignInRequest>,
 ) -> Result<Json<TokenResponse>, AppError> {
     payload.validate()?;
 
@@ -157,7 +157,7 @@ pub async fn refresh(
     Ok(Json(tokens))
 }
 
-pub async fn logout(
+pub async fn sign_out(
     State(state): State<AppState>,
     auth_user: AuthUser,
     Json(payload): Json<RefreshRequest>,

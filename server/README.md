@@ -26,15 +26,28 @@ All configuration is via environment variables (see `.env.example`):
 | `REFRESH_TOKEN_TTL_DAYS`   | Refresh token lifetime                                   | `7`          |
 | `ALLOWED_ORIGINS`          | Comma-separated CORS allow-list; empty allows any origin | _(empty)_    |
 
+## Seeding
+
+```bash
+cargo run --bin seed
+```
+
+Creates two accounts if they don't already exist — safe to re-run (existing usernames are skipped, not overwritten):
+
+| Role     | Username | Password (default) | Override env var       |
+| -------- | -------- | ------------------ | ---------------------- |
+| `admin`  | `admin`  | `adminpass123`     | `SEED_ADMIN_PASSWORD`  |
+| `member` | `client` | `clientpass123`    | `SEED_CLIENT_PASSWORD` |
+
 ## API
 
 All request/response bodies are JSON. Errors are shaped as `{ "error": { "code": "STABLE_CODE", "message": "..." } }`.
 
 - `GET /health` — liveness + database connectivity probe.
-- `POST /api/v1/auth/register` — `{ username, email, password, display_name }` → token pair.
-- `POST /api/v1/auth/login` — `{ username_or_email, password }` → token pair.
+- `POST /api/v1/auth/signup` — `{ username, email, password, display_name }` → token pair.
+- `POST /api/v1/auth/signin` — `{ username_or_email, password }` → token pair.
 - `POST /api/v1/auth/refresh` — `{ refresh_token }` → rotated token pair (single-use; reuse is rejected).
-- `POST /api/v1/auth/logout` — `Authorization: Bearer <access>` + `{ refresh_token }` → revokes that session.
+- `POST /api/v1/auth/signout` — `Authorization: Bearer <access>` + `{ refresh_token }` → revokes that session.
 - `GET /api/v1/users/me` — `Authorization: Bearer <access>` → your own profile (includes email).
 - `GET /api/v1/users` — `Authorization: Bearer <access>` → all users with their current online state.
 - `GET /ws/presence?token=<access_token>` — WebSocket. On connect/disconnect the server broadcasts `{"type":"user_online"|"user_offline", user_id, username}` to every connected client and persists `is_online`/`last_seen_at` on the user record. On connect you also receive one `{"type":"snapshot", "online_user_ids":[...]}` message. The token travels as a query parameter because browser/webview `WebSocket` cannot set an `Authorization` header.
