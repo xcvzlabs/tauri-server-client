@@ -14,6 +14,8 @@ pub enum AppError {
     Unauthorized,
     #[error("insufficient permissions")]
     Forbidden,
+    #[error("this account has been disabled")]
+    AccountDisabled,
     #[error("{0}")]
     NotFound(&'static str),
     #[error("{0}")]
@@ -44,6 +46,7 @@ impl AppError {
             AppError::InvalidCredentials => (StatusCode::UNAUTHORIZED, "INVALID_CREDENTIALS"),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "UNAUTHORIZED"),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "FORBIDDEN"),
+            AppError::AccountDisabled => (StatusCode::FORBIDDEN, "ACCOUNT_DISABLED"),
             AppError::NotFound(_) => (StatusCode::NOT_FOUND, "NOT_FOUND"),
             AppError::Conflict(_) => (StatusCode::CONFLICT, "CONFLICT"),
             AppError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DATABASE_ERROR"),
@@ -164,6 +167,14 @@ mod tests {
         assert_eq!(status, StatusCode::CONFLICT);
         assert_eq!(body["error"]["code"], "CONFLICT");
         assert_eq!(body["error"]["message"], "already taken");
+    }
+
+    #[tokio::test]
+    async fn account_disabled_maps_to_403() {
+        let (status, body) = response_json(AppError::AccountDisabled).await;
+
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(body["error"]["code"], "ACCOUNT_DISABLED");
     }
 
     #[tokio::test]

@@ -19,6 +19,18 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
         .is_ok())
 }
 
+pub async fn hash_password_blocking(password: String) -> Result<String, AppError> {
+    tokio::task::spawn_blocking(move || hash_password(&password))
+        .await
+        .map_err(|err| AppError::Internal(format!("password hashing task panicked: {err}")))?
+}
+
+pub async fn verify_password_blocking(password: String, hash: String) -> Result<bool, AppError> {
+    tokio::task::spawn_blocking(move || verify_password(&password, &hash))
+        .await
+        .map_err(|err| AppError::Internal(format!("password verification task panicked: {err}")))?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -49,8 +49,13 @@ All request/response bodies are JSON. Errors are shaped as `{ "error": { "code":
 - `POST /api/v1/auth/refresh` — `{ refresh_token }` → rotated token pair (single-use; reuse is rejected).
 - `POST /api/v1/auth/signout` — `Authorization: Bearer <access>` + `{ refresh_token }` → revokes that session.
 - `GET /api/v1/users/me` — `Authorization: Bearer <access>` → your own profile (includes email).
-- `GET /api/v1/users` — `Authorization: Bearer <access>` → all users with their current online state.
-- `GET /ws/presence?token=<access_token>` — WebSocket. On connect/disconnect the server broadcasts `{"type":"user_online"|"user_offline", user_id, username}` to every connected client and persists `is_online`/`last_seen_at` on the user record. On connect you also receive one `{"type":"snapshot", "online_user_ids":[...]}` message. The token travels as a query parameter because browser/webview `WebSocket` cannot set an `Authorization` header.
+- `GET /api/v1/users` — `Authorization: Bearer <access>` → all users with their current online state. Does not include email or IP address.
+- `GET /api/v1/admin/users` — `Authorization: Bearer <access>`, admin only → all users, additionally including `email`, `ip_address` (last known, LAN address), and `is_disabled`.
+- `POST /api/v1/admin/users` — admin only → `{ username, email, password, display_name, role }` → creates a user directly with the given role (`"admin"` or `"member"`), no signup flow needed.
+- `PATCH /api/v1/admin/users/{id}/role` — admin only → `{ role }` → promotes/demotes a user. An admin cannot change their own role.
+- `PATCH /api/v1/admin/users/{id}/disable` — admin only → `{ is_disabled }` → disables or re-enables an account. Disabling immediately revokes all of that user's refresh tokens and force-closes any open WebSocket connection (see Security notes). An admin cannot disable their own account.
+- `DELETE /api/v1/admin/users/{id}` — admin only → deletes a user. An admin cannot remove their own account.
+- `GET /ws/presence?token=<access_token>` — WebSocket. On connect/disconnect the server broadcasts `{"type":"user_online"|"user_offline", user_id, username}` to every connected client and persists `is_online`/`last_seen_at`/`ip_address` on the user record. On connect you also receive one `{"type":"snapshot", "online_user_ids":[...]}` message. The token travels as a query parameter because browser/webview `WebSocket` cannot set an `Authorization` header.
 
 Auth endpoints (`/api/v1/auth/*`) are rate-limited per client IP to blunt credential-stuffing/brute-force attempts.
 
@@ -58,7 +63,8 @@ Auth endpoints (`/api/v1/auth/*`) are rate-limited per client IP to blunt creden
 
 - Passwords are hashed with Argon2id.
 - Refresh tokens are random 256-bit values; only their SHA-256 hash is stored, and each refresh rotates (revokes-then-reissues) the token so a stolen, already-used token can't be replayed.
-- Access tokens are short-lived, stateless JWTs (HS256); nothing sensitive is embedded in the payload beyond user id/username.
+- Access tokens are short-lived JWTs (HS256), but they are **not** purely stateless: every authenticated request re-checks the account's `is_disabled` flag in the database. This means disabling an account takes effect on that user's very next request rather than only once their token expires, at the cost of one indexed lookup per request.
+- Disabling an account also revokes its refresh tokens and broadcasts a force-disconnect over the presence WebSocket, closing any connection that account currently has open.
 
 ## Development
 

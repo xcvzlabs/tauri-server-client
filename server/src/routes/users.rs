@@ -6,8 +6,8 @@ use crate::error::AppError;
 use crate::models::{MeProfile, User, UserProfile};
 use crate::state::AppState;
 
-const USER_COLUMNS: &str =
-    "id, username, email, password_hash, display_name, role, is_online, last_seen_at, created_at";
+const USER_COLUMNS: &str = "id, username, email, password_hash, display_name, role, is_online, \
+                             is_disabled, ip_address, last_seen_at, created_at";
 
 pub async fn me(
     State(state): State<AppState>,

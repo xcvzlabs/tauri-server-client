@@ -1,8 +1,9 @@
 use axum::Json;
-use axum::extract::State;
+use axum::extract::{ConnectInfo, State};
 use axum::http::StatusCode;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -11,8 +12,8 @@ use crate::error::AppError;
 use crate::models::{MeProfile, RefreshTokenRecord, User};
 use crate::state::AppState;
 
-const USER_COLUMNS: &str =
-    "id, username, email, password_hash, display_name, role, is_online, last_seen_at, created_at";
+const USER_COLUMNS: &str = "id, username, email, password_hash, display_name, role, is_online, \
+                             is_disabled, ip_address, last_seen_at, created_at";
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct SignUpRequest {
@@ -51,6 +52,7 @@ pub struct TokenResponse {
 
 pub async fn sign_up(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(payload): Json<SignUpRequest>,
 ) -> Result<(StatusCode, Json<TokenResponse>), AppError> {
     payload.validate()?;
@@ -59,8 +61,9 @@ pub async fn sign_up(
     let email = payload.email.trim().to_lowercase();
     let display_name = payload.display_name.trim().to_string();
     let user_id = Uuid::new_v4().to_string();
+    let ip_address = addr.ip().to_string();
 
-    let password_hash = hash_password_blocking(payload.password).await?;
+    let password_hash = password::hash_password_blocking(payload.password).await?;
 
     let existing_user_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
         .fetch_one(&state.db)
@@ -72,7 +75,7 @@ pub async fn sign_up(
     };
 
     let insert_result = sqlx::query(
-        "INSERT INTO users (id, username, email, password_hash, display_name, role) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO users (id, username, email, password_hash, display_name, role, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&user_id)
     .bind(&username)
@@ -80,6 +83,7 @@ pub async fn sign_up(
     .bind(&password_hash)
     .bind(&display_name)
     .bind(role)
+    .bind(&ip_address)
     .execute(&state.db)
     .await;
 
@@ -100,6 +104,7 @@ pub async fn sign_up(
 
 pub async fn sign_in(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(payload): Json<SignInRequest>,
 ) -> Result<Json<TokenResponse>, AppError> {
     payload.validate()?;
@@ -116,10 +121,22 @@ pub async fn sign_in(
     .ok_or(AppError::InvalidCredentials)?;
 
     let password_hash = user.password_hash.clone();
-    let is_valid = verify_password_blocking(payload.password, password_hash).await?;
+    let is_valid = password::verify_password_blocking(payload.password, password_hash).await?;
     if !is_valid {
         return Err(AppError::InvalidCredentials);
     }
+
+    if user.is_disabled {
+        return Err(AppError::AccountDisabled);
+    }
+
+    let ip_address = addr.ip().to_string();
+    sqlx::query("UPDATE users SET ip_address = ?, updated_at = ? WHERE id = ?")
+        .bind(&ip_address)
+        .bind(Utc::now())
+        .bind(&user.id)
+        .execute(&state.db)
+        .await?;
 
     let tokens = issue_token_pair(&state, &user).await?;
     Ok(Json(tokens))
@@ -146,6 +163,10 @@ pub async fn refresh(
     }
 
     let user = fetch_user_by_id(&state, &record.user_id).await?;
+
+    if user.is_disabled {
+        return Err(AppError::AccountDisabled);
+    }
 
     sqlx::query("UPDATE refresh_tokens SET revoked_at = ? WHERE id = ?")
         .bind(Utc::now())
@@ -217,16 +238,4 @@ async fn fetch_user_by_id(state: &AppState, user_id: &str) -> Result<User, AppEr
         .fetch_optional(&state.db)
         .await?
         .ok_or(AppError::NotFound("user not found"))
-}
-
-async fn hash_password_blocking(password: String) -> Result<String, AppError> {
-    tokio::task::spawn_blocking(move || password::hash_password(&password))
-        .await
-        .map_err(|err| AppError::Internal(format!("password hashing task panicked: {err}")))?
-}
-
-async fn verify_password_blocking(password: String, hash: String) -> Result<bool, AppError> {
-    tokio::task::spawn_blocking(move || password::verify_password(&password, &hash))
-        .await
-        .map_err(|err| AppError::Internal(format!("password verification task panicked: {err}")))?
 }

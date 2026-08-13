@@ -8,6 +8,7 @@ use tokio::sync::{RwLock, broadcast};
 pub enum PresenceEvent {
     UserOnline { user_id: String, username: String },
     UserOffline { user_id: String, username: String },
+    ForceDisconnect { user_id: String },
 }
 
 #[derive(Clone)]
@@ -140,7 +141,7 @@ mod tests {
                 assert_eq!(user_id, "user-1");
                 assert_eq!(username, "alice");
             }
-            PresenceEvent::UserOffline { .. } => panic!("expected UserOnline event"),
+            other => panic!("expected UserOnline event, got {other:?}"),
         }
     }
 }

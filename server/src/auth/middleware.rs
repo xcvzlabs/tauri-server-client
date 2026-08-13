@@ -28,6 +28,18 @@ impl FromRequestParts<AppState> for AuthUser {
             .strip_prefix("Bearer ")
             .ok_or(AppError::Unauthorized)?;
         let claims = tokens::verify_access_token(token, &state.config.jwt_secret)?;
+        let is_disabled: Option<bool> =
+            sqlx::query_scalar("SELECT is_disabled FROM users WHERE id = ?")
+                .bind(&claims.sub)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(AppError::Database)?;
+
+        match is_disabled {
+            Some(true) => return Err(AppError::AccountDisabled),
+            Some(false) => {}
+            None => return Err(AppError::Unauthorized),
+        }
 
         Ok(AuthUser {
             user_id: claims.sub,

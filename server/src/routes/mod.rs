@@ -38,7 +38,9 @@ pub fn build_router(state: AppState) -> Router {
         .route("/", get(users::list));
 
     let admin_routes = Router::new()
+        .route("/users", get(admin::list_users).post(admin::add_user))
         .route("/users/{user_id}/role", patch(admin::update_role))
+        .route("/users/{user_id}/disable", patch(admin::set_disabled))
         .route("/users/{user_id}", delete(admin::remove_user));
 
     let api_v1 = Router::new()
@@ -645,5 +647,274 @@ mod tests {
             1,
             "the removed user must be gone"
         );
+    }
+
+    #[tokio::test]
+    async fn admin_list_exposes_email_and_ip_but_public_list_does_not() {
+        let (state, _guard) = test_state().await;
+        let app = build_router(state);
+
+        let admin_tokens = sign_up(app.clone(), "alice").await;
+        let admin_token = admin_tokens["access_token"].as_str().unwrap();
+
+        let response = app
+            .clone()
+            .oneshot(auth_get("/api/v1/admin/users", admin_token))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let admin_view = body_json(response).await;
+        let admin_view = admin_view.as_array().unwrap();
+        assert_eq!(admin_view[0]["email"], "alice@example.com");
+        assert!(admin_view[0].get("is_disabled").is_some());
+        assert!(
+            admin_view[0]["ip_address"].is_string(),
+            "signing up should have recorded the caller's IP"
+        );
+
+        let response = app
+            .oneshot(auth_get("/api/v1/users", admin_token))
+            .await
+            .unwrap();
+        let public_view = body_json(response).await;
+        let public_view = public_view.as_array().unwrap();
+        assert!(
+            public_view[0].get("email").is_none(),
+            "public user list must not leak email addresses"
+        );
+        assert!(
+            public_view[0].get("ip_address").is_none(),
+            "public user list must not leak IP addresses"
+        );
+    }
+
+    #[tokio::test]
+    async fn non_admin_is_forbidden_from_the_admin_user_list() {
+        let (state, _guard) = test_state().await;
+        let app = build_router(state);
+
+        sign_up(app.clone(), "alice").await; // becomes admin, irrelevant to this test
+        let member_tokens = sign_up(app.clone(), "bob").await;
+        let member_token = member_tokens["access_token"].as_str().unwrap();
+
+        let response = app
+            .oneshot(auth_get("/api/v1/admin/users", member_token))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn admin_can_add_a_user_with_a_chosen_role() {
+        let (state, _guard) = test_state().await;
+        let app = build_router(state);
+
+        let admin_tokens = sign_up(app.clone(), "alice").await;
+        let admin_token = admin_tokens["access_token"].as_str().unwrap();
+
+        let response = app
+            .clone()
+            .oneshot(auth_request(
+                "POST",
+                "/api/v1/admin/users",
+                admin_token,
+                Some(&json!({
+                    "username": "carol",
+                    "email": "carol@example.com",
+                    "password": "correcthorsebattery",
+                    "display_name": "Carol",
+                    "role": "admin",
+                })),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let created = body_json(response).await;
+        assert_eq!(created["role"], "admin");
+        assert_eq!(created["username"], "carol");
+
+        let response = app
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/auth/signin",
+                &json!({ "username_or_email": "carol", "password": "correcthorsebattery" }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            response.status(),
+            StatusCode::OK,
+            "the admin-created account must be able to sign in with the given password"
+        );
+    }
+
+    #[tokio::test]
+    async fn add_user_rejects_an_invalid_role() {
+        let (state, _guard) = test_state().await;
+        let app = build_router(state);
+
+        let admin_tokens = sign_up(app.clone(), "alice").await;
+        let admin_token = admin_tokens["access_token"].as_str().unwrap();
+
+        let response = app
+            .oneshot(auth_request(
+                "POST",
+                "/api/v1/admin/users",
+                admin_token,
+                Some(&json!({
+                    "username": "carol",
+                    "email": "carol@example.com",
+                    "password": "correcthorsebattery",
+                    "display_name": "Carol",
+                    "role": "superuser",
+                })),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
+    #[tokio::test]
+    async fn admin_cannot_disable_their_own_account() {
+        let (state, _guard) = test_state().await;
+        let app = build_router(state);
+
+        let admin_tokens = sign_up(app.clone(), "alice").await;
+        let admin_token = admin_tokens["access_token"].as_str().unwrap();
+        let admin_id = admin_tokens["user"]["id"].as_str().unwrap();
+
+        let response = app
+            .oneshot(auth_request(
+                "PATCH",
+                &format!("/api/v1/admin/users/{admin_id}/disable"),
+                admin_token,
+                Some(&json!({ "is_disabled": true })),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+    }
+
+    #[tokio::test]
+    async fn disabling_a_user_immediately_revokes_their_existing_access_token() {
+        let (state, _guard) = test_state().await;
+        let app = build_router(state);
+
+        let admin_tokens = sign_up(app.clone(), "alice").await;
+        let admin_token = admin_tokens["access_token"].as_str().unwrap();
+        let member_tokens = sign_up(app.clone(), "bob").await;
+        let member_token = member_tokens["access_token"].as_str().unwrap();
+        let member_id = member_tokens["user"]["id"].as_str().unwrap();
+
+        // The member's access token is still unexpired and was valid a
+        // moment ago.
+        let response = app
+            .clone()
+            .oneshot(auth_get("/api/v1/users/me", member_token))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response = app
+            .clone()
+            .oneshot(auth_request(
+                "PATCH",
+                &format!("/api/v1/admin/users/{member_id}/disable"),
+                admin_token,
+                Some(&json!({ "is_disabled": true })),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+        // The same still-unexpired access token must now be rejected,
+        // without waiting for it to expire.
+        let response = app
+            .oneshot(auth_get("/api/v1/users/me", member_token))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let body = body_json(response).await;
+        assert_eq!(body["error"]["code"], "ACCOUNT_DISABLED");
+    }
+
+    #[tokio::test]
+    async fn disabling_a_user_revokes_their_refresh_token_and_blocks_signin() {
+        let (state, _guard) = test_state().await;
+        let app = build_router(state);
+
+        let admin_tokens = sign_up(app.clone(), "alice").await;
+        let admin_token = admin_tokens["access_token"].as_str().unwrap();
+        let member_tokens = sign_up(app.clone(), "bob").await;
+        let member_id = member_tokens["user"]["id"].as_str().unwrap();
+        let refresh_token = member_tokens["refresh_token"].as_str().unwrap().to_string();
+
+        app.clone()
+            .oneshot(auth_request(
+                "PATCH",
+                &format!("/api/v1/admin/users/{member_id}/disable"),
+                admin_token,
+                Some(&json!({ "is_disabled": true })),
+            ))
+            .await
+            .unwrap();
+
+        let response = app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/auth/refresh",
+                &json!({ "refresh_token": refresh_token }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let response = app
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/auth/signin",
+                &json!({ "username_or_email": "bob", "password": "correcthorsebattery" }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let body = body_json(response).await;
+        assert_eq!(body["error"]["code"], "ACCOUNT_DISABLED");
+    }
+
+    #[tokio::test]
+    async fn re_enabling_a_user_restores_signin() {
+        let (state, _guard) = test_state().await;
+        let app = build_router(state);
+
+        let admin_tokens = sign_up(app.clone(), "alice").await;
+        let admin_token = admin_tokens["access_token"].as_str().unwrap();
+        let member_tokens = sign_up(app.clone(), "bob").await;
+        let member_id = member_tokens["user"]["id"].as_str().unwrap();
+
+        for is_disabled in [true, false] {
+            app.clone()
+                .oneshot(auth_request(
+                    "PATCH",
+                    &format!("/api/v1/admin/users/{member_id}/disable"),
+                    admin_token,
+                    Some(&json!({ "is_disabled": is_disabled })),
+                ))
+                .await
+                .unwrap();
+        }
+
+        let response = app
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/auth/signin",
+                &json!({ "username_or_email": "bob", "password": "correcthorsebattery" }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
     }
 }

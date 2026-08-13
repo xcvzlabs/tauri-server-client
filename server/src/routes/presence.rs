@@ -1,9 +1,10 @@
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::{Query, State};
+use axum::extract::{ConnectInfo, Query, State};
 use axum::response::IntoResponse;
 use chrono::Utc;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
+use std::net::SocketAddr;
 
 use crate::auth::tokens;
 use crate::error::AppError;
@@ -17,21 +18,49 @@ pub struct PresenceQuery {
 
 pub async fn ws_handler(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Query(query): Query<PresenceQuery>,
     ws: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, AppError> {
     let claims = tokens::verify_access_token(&query.token, &state.config.jwt_secret)?;
 
-    Ok(ws.on_upgrade(move |socket| handle_socket(socket, state, claims.sub, claims.username)))
+    let is_disabled: Option<bool> =
+        sqlx::query_scalar("SELECT is_disabled FROM users WHERE id = ?")
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(AppError::Database)?;
+
+    match is_disabled {
+        Some(true) => return Err(AppError::AccountDisabled),
+        Some(false) => {}
+        None => return Err(AppError::Unauthorized),
+    }
+
+    Ok(ws.on_upgrade(move |socket| {
+        handle_socket(
+            socket,
+            state,
+            claims.sub,
+            claims.username,
+            addr.ip().to_string(),
+        )
+    }))
 }
 
-async fn handle_socket(socket: WebSocket, state: AppState, user_id: String, username: String) {
+async fn handle_socket(
+    socket: WebSocket,
+    state: AppState,
+    user_id: String,
+    username: String,
+    ip_address: String,
+) {
     let (mut sender, mut receiver) = socket.split();
     let mut events = state.presence.subscribe();
 
     let became_online = state.presence.connect(&user_id).await;
     if became_online {
-        mark_online_in_db(&state, &user_id).await;
+        mark_online_in_db(&state, &user_id, &ip_address).await;
         state.presence.broadcast(PresenceEvent::UserOnline {
             user_id: user_id.clone(),
             username: username.clone(),
@@ -45,8 +74,16 @@ async fn handle_socket(socket: WebSocket, state: AppState, user_id: String, user
         let _ = sender.send(Message::Text(snapshot.into())).await;
     }
 
+    let my_user_id = user_id.clone();
     let mut send_task = tokio::spawn(async move {
         while let Ok(event) = events.recv().await {
+            if let PresenceEvent::ForceDisconnect { user_id: target_id } = &event {
+                if *target_id == my_user_id {
+                    break;
+                }
+                continue;
+            }
+
             let Ok(payload) = serde_json::to_string(&event) else {
                 continue;
             };
@@ -78,12 +115,14 @@ async fn handle_socket(socket: WebSocket, state: AppState, user_id: String, user
     }
 }
 
-async fn mark_online_in_db(state: &AppState, user_id: &str) {
-    if let Err(err) = sqlx::query("UPDATE users SET is_online = 1, updated_at = ? WHERE id = ?")
-        .bind(Utc::now())
-        .bind(user_id)
-        .execute(&state.db)
-        .await
+async fn mark_online_in_db(state: &AppState, user_id: &str, ip_address: &str) {
+    if let Err(err) =
+        sqlx::query("UPDATE users SET is_online = 1, ip_address = ?, updated_at = ? WHERE id = ?")
+            .bind(ip_address)
+            .bind(Utc::now())
+            .bind(user_id)
+            .execute(&state.db)
+            .await
     {
         tracing::error!(error = %err, user_id, "failed to mark user online");
     }
